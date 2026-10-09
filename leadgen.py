@@ -446,10 +446,11 @@ class H(BaseHTTPRequestHandler):
         self.send(200, body) if body else self.send(404, "not found")
 
     def do_POST(self):
+        n = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(n).decode()  # read before any reply, or rejected clients get a connection reset
         if not self.ok_origin():
             return self.send(403, "forbidden")
-        n = int(self.headers.get("Content-Length", 0))
-        raw = parse_qs(self.rfile.read(n).decode(), keep_blank_values=True)
+        raw = parse_qs(body, keep_blank_values=True)
         f = {k: v[0] for k, v in raw.items()}
         oid = int(f["id"]) if f.get("id", "").isdigit() else None
         if self.path == "/lead":
