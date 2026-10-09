@@ -177,7 +177,7 @@ color:var(--text);display:grid;grid-template-columns:228px 1fr;min-height:100vh}
 aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 12px;position:sticky;top:0;height:100vh}
 .brand{font-weight:700;font-size:15px;padding:2px 10px 20px;display:flex;gap:10px;align-items:center}
 .brand i{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--accent),#06b6d4)}
-aside a{display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;color:var(--muted);
+aside a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:var(--muted);
 text-decoration:none;font-weight:500;margin-bottom:2px}
 aside a:hover{background:var(--bg);color:var(--text)}aside a.on{background:var(--soft);color:var(--accent)}
 aside a small{font-size:11px;background:var(--bg);border-radius:99px;padding:0 7px}
@@ -235,8 +235,8 @@ font-size:13px;background:var(--panel)}.chip.on{background:var(--text);color:var
 .save{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding:18px 0 14px;display:flex;gap:8px}
 pre{white-space:pre-wrap;font:13px/1.55 ui-monospace,Menlo,monospace;margin:0}
 .empty{color:var(--muted);text-align:center;padding:24px 8px;font-size:13px}
-.row{display:flex;gap:10px}.row>*{flex:1}
-@media(max-width:900px){body{grid-template-columns:1fr}aside{position:static;height:auto;display:flex;gap:4px;
+.row{display:flex;gap:10px}.row>*{flex:1}.card:has(>table){overflow-x:auto}
+@media(max-width:900px){body{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside{position:static;height:auto;display:flex;gap:4px;
 overflow-x:auto;padding:10px}.brand{display:none}main{padding:16px}.grid2,.quick{grid-template-columns:1fr}}
 """
 e = lambda s: html.escape(f"{s:g}" if isinstance(s, float) else str(s if s is not None else ""))
@@ -396,7 +396,7 @@ def claude_page():
 <div class=step-h><b>{e(j['name'])}</b>{pill('running') if f"job{j['id']}" in running else pill('on' if j['enabled'] else 'off')}</div>
 <label>Name<input name=name value="{e(j['name'])}"></label><label>What Claude does<textarea name=prompt rows=3>{e(j['prompt'])}</textarea></label>
 <div class=row><label>Every (hours)<input type=number step=0.25 min=0.25 name=every_hours value="{e(j['every_hours'])}"></label>
-<label>Last run<input disabled value="{when(j['last_run'])} · {e(j['last_status'] or '-')}"></label></div>
+<label>Last run<input disabled value="{when(j['last_run'])}{' · ' + e(j['last_status']) if j['last_status'] else ''}"></label></div>
 <label class=check><input type=checkbox name=enabled value=1{' checked' if j['enabled'] else ''}>Run on schedule</label>
 <div style="display:flex;gap:6px;flex-wrap:wrap"><button class=btn>Save</button><button class="btn ghost" formaction=/job/run>Run now</button>
 <button class="btn danger" formaction=/job/delete onclick="return confirm('Delete job?')">Delete</button></div></form>""" for j in jobs)
