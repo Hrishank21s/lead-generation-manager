@@ -103,6 +103,8 @@ Skip chains and franchises. Sign emails as "Sam, Northline Web".
 **Claude → Jobs.** A job is a task in plain English plus an interval in hours.
 
 - **Run now** - runs once (a few minutes). Results appear under *Run history* and in **Leads**.
+- **Stop all runs** - shown in the sidebar while Claude is working; ends every run at once.
+  Stopping the server (Ctrl+C) ends its runs too.
 - **Run on schedule** - repeats while the server is up.
 - Add as many jobs as you like, e.g. one per city or niche.
 

@@ -14,7 +14,7 @@ project brief). The owner builds. Every Claude run is `claude -p` with web tools
 sends mail; drafts open in the owner's mail app via mailto, so the owner approves every send.
 # ponytail: interval-in-hours schedule, no cron syntax; add cron-style times if a job needs a fixed hour.
 """
-import argparse, html, os, sqlite3, subprocess, sys, threading, time
+import argparse, html, os, signal, sqlite3, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
@@ -58,6 +58,7 @@ DEFAULT_INSTR = ("We sell website rebuilds ($600-900, 5 days) to small businesse
                  "In notes, write the 1-2 concrete problems you saw on their site.")
 DEFAULT_JOB = "Find 5 new leads matching the instructions. Use any public source (Product Hunt, directories, Google results)."
 running = set()  # keys: "job<id>" or "lead<id>:<action>"
+procs = {}  # running key -> its claude process, so Stop all can kill it
 
 
 def q(sql, args=()):
@@ -92,26 +93,57 @@ def init():
 
 # ---------- Claude runs ----------
 
-def claude(prompt, tools):
+def claude_cmd(tools):
     # --safe-mode: no user/project CLAUDE.md, hooks, plugins or MCP servers leak into lead runs.
     # --tools: the ONLY tools that exist in the run (Read/Write/MCP are gone, not just unapproved).
     available = ",".join(dict.fromkeys(t.split("(")[0] for t in tools))
-    cmd = ([CLAUDE, "-p", "--safe-mode", "--permission-mode", "default", "--tools", available]
-           + (["--model", MODEL] if MODEL else []) + (["--allowedTools", *tools] if tools else []))
+    return ([CLAUDE, "-p", "--safe-mode", "--permission-mode", "default", "--tools", available]
+            + (["--model", MODEL] if MODEL else []) + (["--allowedTools", *tools] if tools else []))
+
+
+def claude(prompt, tools, key=None):
     try:
-        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, cwd=ROOT, timeout=1800)
-        return ("ok", p.stdout.strip()) if p.returncode == 0 else (f"exit {p.returncode}", p.stdout + p.stderr)
+        # own process group: Stop all / timeout kill claude AND whatever it spawned (Bash tool calls)
+        p = subprocess.Popen(claude_cmd(tools), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, cwd=ROOT, start_new_session=True)
     except FileNotFoundError:
         return "error", f"Claude Code CLI not found: {CLAUDE!r}. Install it (https://claude.com/claude-code) or set LEADGEN_CLAUDE."
-    except Exception as ex:  # timeout etc. - record it, keep the server alive
+    procs[key] = p
+    try:
+        out, err = p.communicate(prompt, timeout=1800)
+    except subprocess.TimeoutExpired:
+        kill(p)
+        out, err = p.communicate()
+        return "error", "timed out after 30 min\n" + out + err
+    except Exception as ex:  # record it, keep the server alive
+        kill(p)
         return "error", repr(ex)
+    finally:
+        procs.pop(key, None)
+    if getattr(p, "stopped", False):  # claude traps SIGTERM and exits 143, so the exit code can't tell us
+        return "stopped", out + err
+    return ("ok", out.strip()) if p.returncode == 0 else (f"exit {p.returncode}", out + err)
+
+
+def kill(p):
+    # ponytail: POSIX process groups only (macOS/Linux, what CI covers); Windows would need taskkill /T.
+    try:
+        os.killpg(p.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+
+
+def stop_all():
+    for p in list(procs.values()):
+        p.stopped = True
+        kill(p)
 
 
 def run(key, kind, prompt, tools, lead_id=None, job_id=None):
     rid = q("INSERT INTO runs(kind,lead_id,job_id,started,status) VALUES(?,?,?,?,'running') RETURNING id",
             (kind, lead_id, job_id, time.time()))[0]["id"]
     try:
-        status, out = claude(prompt, tools)
+        status, out = claude(prompt, tools, key)
         q("UPDATE runs SET finished=?, status=?, output=? WHERE id=?", (time.time(), status, out[-20000:], rid))
         if job_id:
             q("UPDATE jobs SET last_status=?, last_output=? WHERE id=?", (status, out[-20000:], job_id))
@@ -270,8 +302,12 @@ def page(title, body, active, sub="", refresh=False):
     meta = "<meta http-equiv=refresh content=8>" if refresh else ""
     return f"""<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
 {meta}<title>{e(title)} · LeadGen Manager</title><style>{CSS}</style>
-<aside><div class=brand><i></i>LeadGen Manager</div>{links}</aside>
+<aside><div class=brand><i></i>LeadGen Manager</div>{links}{STOP if running else ""}</aside>
 <main><div class=head><div><h1>{e(title)}</h1><p class=sub>{sub}</p></div></div>{body}</main></html>"""
+
+
+STOP = ('<form method=post action=/stop style="margin:12px 10px 0"><button class="btn danger" '
+        'onclick="return confirm(\'Stop every Claude run now?\')">Stop all runs</button></form>')
 
 
 def status_select(cur="new"):
@@ -492,6 +528,8 @@ class H(BaseHTTPRequestHandler):
                 q("INSERT INTO jobs(name,prompt,every_hours,enabled) VALUES(?,?,?,?)", vals)
         elif self.path == "/job/run" and oid:
             start_job(oid)
+        elif self.path == "/stop":
+            stop_all()
         elif self.path == "/job/delete":
             q("DELETE FROM jobs WHERE id=?", (oid,))
         else:
@@ -509,7 +547,11 @@ def main():
         q("UPDATE runs SET status='interrupted' WHERE status='running'")  # left over from a previous server
         threading.Thread(target=scheduler, daemon=True).start()
         print(f"LeadGen Manager on http://127.0.0.1:{port}  (Ctrl+C to stop; jobs only run while this is up)")
-        ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+        signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))  # `kill` gets the same cleanup as Ctrl+C
+        try:
+            ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+        finally:  # runs live in their own process groups, so they'd outlive the server without this
+            stop_all()
     elif len(sys.argv) > 1 and sys.argv[1] == "add":
         p = argparse.ArgumentParser()
         for k in ("--name", "--url"):

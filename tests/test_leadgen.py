@@ -1,6 +1,6 @@
 """Smoke tests: CLI, every page, lead save + checklist, mailto drafts, CSRF/rebinding guards.
 Run: python3 -m unittest discover tests   (no Claude calls - LEADGEN_CLAUDE points at a missing binary)"""
-import os, subprocess, sys, tempfile, threading, unittest, urllib.error, urllib.parse, urllib.request
+import os, subprocess, sys, tempfile, threading, time, unittest, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 TMP = tempfile.mkdtemp()
@@ -92,15 +92,30 @@ class LeadGenTest(unittest.TestCase):
         self.assertEqual(status, "error")
         self.assertIn("no-such-claude", out)
 
-    def test_claude_runs_only_get_their_tools(self):
-        seen = []
-        real, leadgen.subprocess.run = leadgen.subprocess.run, lambda cmd, **kw: seen.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", "")
+    def test_stop_all_kills_running_claude(self):
+        fake = Path(TMP) / "slow-claude"
+        fake.write_text("#!/bin/sh\nsleep 30 &\nwait\n")  # child process too: the whole group must die
+        fake.chmod(0o755)
+        leadgen.CLAUDE = str(fake)
         try:
-            leadgen.claude("hi", leadgen.JOB_TOOLS)
-            leadgen.claude("hi", [])
+            leadgen.start("lead1:research", "research", "hi", [], lead_id=1)
+            for _ in range(50):
+                if leadgen.procs:
+                    break
+                time.sleep(0.05)
+            self.assertIn("Stop all runs", self.req("/", origin=None)[1])
+            self.assertEqual(self.req("/stop", {"x": 1})[0], 303)
+            for _ in range(100):
+                if not leadgen.running:
+                    break
+                time.sleep(0.05)
+            self.assertFalse(leadgen.running)
+            self.assertEqual(leadgen.q("SELECT status FROM runs ORDER BY id DESC LIMIT 1")[0]["status"], "stopped")
         finally:
-            leadgen.subprocess.run = real
-        job, pitch = seen
+            leadgen.CLAUDE = os.environ["LEADGEN_CLAUDE"]
+
+    def test_claude_runs_only_get_their_tools(self):
+        job, pitch = leadgen.claude_cmd(leadgen.JOB_TOOLS), leadgen.claude_cmd([])
         self.assertIn("--safe-mode", job)
         self.assertEqual(job[job.index("--tools") + 1], "WebSearch,WebFetch,Bash")
         self.assertEqual(pitch[pitch.index("--tools") + 1], "")

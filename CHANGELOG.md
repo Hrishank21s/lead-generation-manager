@@ -10,7 +10,11 @@ versions below 1.0 may change the data model without migration.
   Read and your MCP servers available (only writes were refused), so instructions planted on a lead's
   website could read the lead database. It also loaded your own CLAUDE.md and hooks into every lead task.
 
+### Added
+- **Stop all runs** button in the sidebar while Claude is working.
+
 ### Fixed
+- Stopping the server left its Claude runs going in the background (still adding leads). They now end with it.
 - Drafted emails no longer end with a note to the owner, which "Open in mail" would have sent along.
 
 ## [0.2.0] - 2026-10-09
