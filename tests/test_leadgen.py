@@ -81,6 +81,12 @@ class LeadGenTest(unittest.TestCase):
         self.req("/lead", {"name": "<script>x</script>", "url": "https://xss.example"})
         self.assertNotIn("<script>x</script>", self.req("/leads", origin=None)[1])
 
+    def test_javascript_url_never_linked(self):
+        self.req("/lead", {"name": "Js", "url": "javascript:alert(1)"})
+        lid = leadgen.q("SELECT id FROM leads WHERE name='Js'")[0]["id"]
+        page = self.req(f"/lead/{lid}", origin=None)[1]
+        self.assertNotRegex(page, r"href=[\"']javascript:")
+
     def test_missing_claude_is_recorded_not_fatal(self):
         status, out = leadgen.claude("hi", [])
         self.assertEqual(status, "error")

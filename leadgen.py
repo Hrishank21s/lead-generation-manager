@@ -245,6 +245,11 @@ money = lambda v: f"${v or 0:,.0f}"
 when = lambda t: time.strftime("%b %d, %H:%M", time.localtime(t)) if t else "never"
 
 
+def link(u):
+    """Lead URLs come from the web: only http(s) may become a link (a javascript: URL would run on this origin)."""
+    return u if urlparse(u or "").scheme in ("http", "https") else "#"
+
+
 def num(s):
     try:
         return float(s or 0)
@@ -379,10 +384,10 @@ def lead_page(lid):
 <div class=step><div class=step-h><b><span class=num>4</span>Client's answers</b></div><p class=hint>Paste their reply here, then save or write the brief.</p>
 {area('client_reply', 6, "Paste the client's reply")}</div>
 {step(5, 'brief', 'Project brief', 'What you build from: pages, features, assets, timeline, open questions.', 14)}
-</div></div><div class=save><button class=btn>Save</button><a class="btn ghost" href="{e(r['url'])}" target=_blank rel=noopener>Visit site ↗</a>
+</div></div><div class=save><button class=btn>Save</button><a class="btn ghost" href="{e(link(r['url']))}" target=_blank rel=noopener>Visit site ↗</a>
 <button class="btn danger" formaction=/lead/delete formnovalidate onclick="return confirm('Delete this lead?')">Delete</button></div></form>"""
     return page(r["name"], body, "/clients" if r["status"] in ("replied", "won", "delivered") else "/leads",
-                f"{pill(r['status'])} &nbsp;<a href='{e(r['url'])}' target=_blank rel=noopener>{e(r['url'])}</a>", refresh=bool(busy))
+                f"{pill(r['status'])} &nbsp;<a href='{e(link(r['url']))}' target=_blank rel=noopener>{e(r['url'])}</a>", refresh=bool(busy))
 
 
 def claude_page():
