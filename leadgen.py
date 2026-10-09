@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
-"""Local client CRM + Claude runner. Stdlib only. Data in data/crm.db (git-ignored: leads hold emails).
+"""Lead Generation Manager - local CRM where Claude finds, researches, pitches and onboards clients.
+Python stdlib only. Data in data/leadgen.db (git-ignored: leads hold emails).
 
-  crm.py serve [port]                       # UI at http://127.0.0.1:8765 + runs scheduled Claude jobs
-  crm.py add --name N --url U [--contact C] [--source S] [--notes T]   # used by Claude jobs; dedupes on url
-  crm.py list [status]                      # tab-separated, for Claude to check before adding
+  leadgen.py serve [port]                   # UI at http://127.0.0.1:8765 + runs scheduled Claude jobs
+  leadgen.py add --name N --url U [--contact C] [--source S] [--notes T]   # used by Claude jobs; dedupes on url
+  leadgen.py list [status]                  # tab-separated, for Claude to check before adding
+
+Env: LEADGEN_DB (database path), LEADGEN_CLAUDE (claude binary), LEADGEN_MODEL (optional --model).
+Copyright (c) 2026 Hrishank Soni. Source-available, see LICENSE - not open source.
 
 Split of work: Claude finds leads, researches them, drafts pitches, onboards clients (questionnaire ->
 project brief). The owner builds. Every Claude run is `claude -p` with web tools at most - it never
 sends mail; drafts open in the owner's mail app via mailto, so the owner approves every send.
 # ponytail: interval-in-hours schedule, no cron syntax; add cron-style times if a job needs a fixed hour.
 """
-import argparse, html, sqlite3, subprocess, sys, threading, time
+import argparse, html, os, sqlite3, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
-ROOT = Path(__file__).resolve().parent.parent
-DB = ROOT / "data/crm.db"
+ROOT = Path(__file__).resolve().parent
+DB = Path(os.environ.get("LEADGEN_DB") or ROOT / "data/leadgen.db")
+CLAUDE = os.environ.get("LEADGEN_CLAUDE", "claude")
+MODEL = os.environ.get("LEADGEN_MODEL")
 STAGES = ["new", "qualified", "mockup", "pitched", "replied", "won", "delivered", "lost"]
 COLORS = {"new": "#64748b", "qualified": "#0ea5e9", "mockup": "#8b5cf6", "pitched": "#f59e0b",
           "replied": "#ec4899", "won": "#10b981", "delivered": "#059669", "lost": "#ef4444",
@@ -25,7 +31,7 @@ CHECKLIST = ["Questionnaire sent", "Requirements received", "Brief approved by c
              "Build started", "Delivered", "Final payment received"]
 LEAD_COLS = {"deadline": "TEXT", "paid": "REAL DEFAULT 0", "research": "TEXT", "pitch": "TEXT",
              "questionnaire": "TEXT", "client_reply": "TEXT", "brief": "TEXT", "checklist": "TEXT DEFAULT ''"}
-JOB_TOOLS = ["WebSearch", "WebFetch", "Bash(python3 tools/crm.py add:*)", "Bash(python3 tools/crm.py list:*)"]
+JOB_TOOLS = ["WebSearch", "WebFetch", "Bash(python3 leadgen.py add:*)", "Bash(python3 leadgen.py list:*)"]
 # action -> (button label, allowed tools, task). Output is saved into the lead field of the same name.
 ACTIONS = {
     "research": ("Research their site", ["WebSearch", "WebFetch"],
@@ -66,7 +72,7 @@ def q(sql, args=()):
 
 
 def init():
-    DB.parent.mkdir(exist_ok=True)
+    DB.parent.mkdir(parents=True, exist_ok=True)
     q("""CREATE TABLE IF NOT EXISTS leads(id INTEGER PRIMARY KEY, name TEXT, url TEXT UNIQUE, contact TEXT,
          source TEXT, status TEXT DEFAULT 'new', value REAL DEFAULT 0, notes TEXT,
          added TEXT DEFAULT (datetime('now','localtime')))""")
@@ -87,11 +93,13 @@ def init():
 # ---------- Claude runs ----------
 
 def claude(prompt, tools):
-    cmd = ["claude", "-p", "--permission-mode", "default"] + (["--allowedTools", *tools] if tools else [])
+    cmd = [CLAUDE, "-p", "--permission-mode", "default"] + (["--model", MODEL] if MODEL else []) + (["--allowedTools", *tools] if tools else [])
     try:
         p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, cwd=ROOT, timeout=1800)
         return ("ok", p.stdout.strip()) if p.returncode == 0 else (f"exit {p.returncode}", p.stdout + p.stderr)
-    except Exception as ex:  # timeout / claude missing - record it, keep the server alive
+    except FileNotFoundError:
+        return "error", f"Claude Code CLI not found: {CLAUDE!r}. Install it (https://claude.com/claude-code) or set LEADGEN_CLAUDE."
+    except Exception as ex:  # timeout etc. - record it, keep the server alive
         return "error", repr(ex)
 
 
@@ -128,8 +136,8 @@ def start_job(jid):
 
 Task: {job[0]['prompt']}
 
-You are a scheduled job for the owner's lead CRM. First run `python3 tools/crm.py list` to see existing
-leads. Save each new lead with: python3 tools/crm.py add --name "..." --url "..." --contact "..." --source "..." --notes "..."
+You are a scheduled job for the owner's lead CRM. First run `python3 leadgen.py list` to see existing
+leads. Save each new lead with: python3 leadgen.py add --name "..." --url "..." --contact "..." --source "..." --notes "..."
 Never send email or contact anyone. End with a 3-line summary of what you added."""
     start(f"job{jid}", "job", prompt, JOB_TOOLS, job_id=jid)
 
@@ -191,8 +199,8 @@ margin-bottom:8px;text-decoration:none;color:var(--text);font-weight:500}
 table{width:100%;border-collapse:collapse}
 th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;text-align:left;
 padding:10px 12px;border-bottom:1px solid var(--line)}
-td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--bg)}
+td{padding:11px 12px;vertical-align:top}
+tbody tr{border-bottom:1px solid var(--line)}tbody tr:last-child{border-bottom:0}tbody tr:hover{background:var(--bg)}
 a{color:var(--accent)}.muted{color:var(--muted)}td a.name{color:var(--text);font-weight:600;text-decoration:none}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:1px 10px;border-radius:99px;font-size:12px;font-weight:600;
 white-space:nowrap;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c)}
@@ -252,8 +260,8 @@ def page(title, body, active, sub="", refresh=False):
     links = "".join(f'<a href="{h}"{" class=on" if h == active else ""}>{t}{f"<small>{c}</small>" if c else ""}</a>' for h, t, c in nav)
     meta = "<meta http-equiv=refresh content=8>" if refresh else ""
     return f"""<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-{meta}<title>{e(title)} · Pipeline</title><style>{CSS}</style>
-<aside><div class=brand><i></i>Pipeline</div>{links}</aside>
+{meta}<title>{e(title)} · LeadGen Manager</title><style>{CSS}</style>
+<aside><div class=brand><i></i>LeadGen Manager</div>{links}</aside>
 <main><div class=head><div><h1>{e(title)}</h1><p class=sub>{sub}</p></div></div>{body}</main></html>"""
 
 
@@ -299,7 +307,7 @@ def leads_page(qs):
     chips = f'<a class="chip{" on" if not st else ""}" href="/leads">All {sum(counts.values())}</a>' + "".join(
         f'<a class="chip{" on" if s == st else ""}" href="/leads?status={s}">{s} {counts.get(s, 0)}</a>' for s in STAGES)
     trs = "".join(f"""<tr><td><a class=name href="/lead/{r['id']}">{e(r['name'])}</a><span class=ell>{e(r['url'])}</span></td>
-<td>{pill(r['status'])}</td><td class=ell>{e(r['contact']) or '<span class=muted>-</span>'}</td><td>{money(r['value']) if r['value'] else '-'}</td>
+<td>{pill(r['status'])}</td><td><span class=ell>{e(r['contact']) or '<span class=muted>-</span>'}</span></td><td>{money(r['value']) if r['value'] else '-'}</td>
 <td><span class=ell>{e(r['notes'])}</span></td><td class=muted>{e(r['source'])}</td><td class=muted>{e((r['added'] or '')[:10])}</td></tr>""" for r in rows)
     table = (f"<table><thead><tr><th>Lead</th><th>Status</th><th>Contact</th><th>Value</th><th>Notes</th><th>Source</th><th>Added</th></tr></thead><tbody>{trs}</tbody></table>"
              if rows else "<div class=empty>No leads here yet. Add one above, or run the lead search job on the Claude page.</div>")
@@ -490,7 +498,7 @@ def main():
         port = int(sys.argv[2]) if len(sys.argv) > 2 else 8765
         q("UPDATE runs SET status='interrupted' WHERE status='running'")  # left over from a previous server
         threading.Thread(target=scheduler, daemon=True).start()
-        print(f"CRM on http://127.0.0.1:{port}  (Ctrl+C to stop; jobs only run while this is up)")
+        print(f"LeadGen Manager on http://127.0.0.1:{port}  (Ctrl+C to stop; jobs only run while this is up)")
         ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
     elif len(sys.argv) > 1 and sys.argv[1] == "add":
         p = argparse.ArgumentParser()

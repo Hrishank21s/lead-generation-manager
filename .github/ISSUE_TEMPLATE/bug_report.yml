@@ -1,0 +1,29 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open http://127.0.0.1:8765/leads\n2. ..."
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "macOS 15, Python 3.12, Claude Code 2.x"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Run output or terminal log
+      description: From the Claude page → Run history. Remove any personal data first.
+      render: text

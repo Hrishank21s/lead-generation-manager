@@ -1,0 +1,71 @@
+Lead Generation Manager - Source-Available License, Version 1.0
+
+Copyright (c) 2026 Hrishank Soni. All rights reserved.
+
+This software is source-available. It is NOT open-source software.
+
+1. Definitions
+   "Software" means the source code, documentation, images and other files in this repository,
+   in original or modified form. "You" means the individual or legal entity exercising rights
+   under this License. "Licensor" means the copyright holder named above.
+
+2. What you MAY do
+   Subject to the conditions below, the Licensor grants you a worldwide, non-exclusive,
+   non-transferable, royalty-free license to:
+   (a) download and install the Software on computers you own or control;
+   (b) run and use the Software for any personal or business purpose, including commercial
+       lead generation and client work for yourself or your own organization;
+   (c) change configuration, settings and the Software itself solely for your own internal
+       use, provided those changes are never distributed or published.
+
+3. What you may NOT do
+   You may not, in whole or in part, in original or modified form:
+   (a) copy, re-upload, publish, mirror or redistribute the Software, including to any
+       public or private code repository, package registry, marketplace or website;
+   (b) publish, distribute or share modified versions, derivative works, forks, ports,
+       re-skins or re-branded editions of the Software;
+   (c) sell, rent, lease, sublicense or otherwise commercialize the Software itself, or offer
+       it to third parties as a hosted, managed or software-as-a-service product;
+   (d) remove, alter or obscure this License, the copyright notice, or the Licensor's name or
+       branding in the Software;
+   (e) present the Software, or any part of it, as your own work.
+
+4. GitHub forks
+   GitHub's Terms of Service allow users to view and fork public repositories on GitHub. A fork
+   created on GitHub may be used only to propose contributions back to this repository. It may
+   not be used for any purpose prohibited by Section 3.
+
+5. Your data and output
+   Data you store with the Software and content it produces for you (for example leads,
+   research notes, emails and project briefs) belong to you. The Licensor claims no rights in
+   them. You are solely responsible for how you use them, including compliance with anti-spam,
+   privacy and data-protection laws and with the terms of any AI service you connect.
+
+6. Third-party services
+   The Software calls third-party tools and services you install and pay for yourself (such as
+   Claude Code and Anthropic's APIs). Your use of them is governed by their own terms. This
+   License grants no rights in them.
+
+7. Contributions
+   If you submit a contribution (for example a pull request, patch or suggestion), you grant
+   the Licensor a perpetual, worldwide, irrevocable, royalty-free license to use, modify,
+   relicense and distribute it as part of the Software.
+
+8. Termination
+   Your rights under this License end automatically if you breach it. On termination you must
+   stop using the Software and delete all copies in your possession.
+
+9. Other uses
+   Any use not expressly permitted by this License requires prior written permission from the
+   Licensor. To request permission, open an issue in this repository.
+
+10. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE AND NONINFRINGEMENT. THE SOFTWARE IS A PROTOTYPE AND MAY CONTAIN DEFECTS.
+
+11. Limitation of liability
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE, INCLUDING ANY COSTS OF THIRD-PARTY
+   SERVICES, LOST DATA OR LOST BUSINESS.

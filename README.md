@@ -1,150 +1,236 @@
-# Lead Manager
+<div align="center">
+
+<img src="docs/logo.svg" width="88" alt="Lead Generation Manager logo">
+
+# Lead Generation Manager
+
+**A local CRM where AI finds, researches, pitches and onboards clients - and you do the work you're paid for.**
+
+[![CI](https://github.com/Hrishank21s/lead-generation-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/Hrishank21s/lead-generation-manager/actions/workflows/ci.yml)
+![Status: prototype](https://img.shields.io/badge/status-prototype-orange)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
+![Powered by Claude Code](https://img.shields.io/badge/AI-Claude%20Code-D97757)
+[![License: source-available](https://img.shields.io/badge/license-source--available-lightgrey)](LICENSE)
+
+[Features](#features) · [How it works](#how-it-works) · [Quick start](#quick-start) · [User guide](#user-guide) · [Configuration](#configuration) · [Security](#security) · [FAQ](#faq)
+
+<img src="docs/dashboard.png" alt="Dashboard: KPIs, pipeline board and recent AI activity" width="900">
+
+</div>
 
 > [!WARNING]
-> **Prototype, not a finished product.** This is an early working prototype built for one person's
-> freelance web-dev pipeline. It runs only on your own machine, has no login, no test suite, and
-> the data model may change without migration. Use it to try the idea, not to run a business on yet.
+> **Prototype - not a finished product.** This is an early working version (v0.1). It runs only on
+> your own machine, has no login, and the data model may change between versions without migration.
+> Try it, report issues, but don't run a business on it yet.
 
-A local CRM where **Claude finds, researches, pitches and onboards clients - and you build.**
+---
 
-It is one Python file (`tools/crm.py`, standard library only) that serves a dashboard on
-`http://127.0.0.1:8765` and runs [Claude Code](https://claude.com/claude-code) in headless mode
-(`claude -p`) for the research and writing work.
+## Why
 
-![Dashboard](docs/dashboard.png)
+Freelancers and small agencies lose most of their week to the work *around* the work: finding
+prospects, checking their websites, writing cold emails, chasing requirements. Lead Generation
+Manager hands that to an AI agent running on **your own** Claude account, and keeps everything in one
+local dashboard - while you stay in control of every message that goes out.
+
+## Features
+
+| | |
+|---|---|
+| 🔎 **Scheduled lead search** | Plain-English jobs ("find 5 dentists in Pune with outdated sites") run on an interval and add leads automatically, skipping duplicates. |
+| 🧪 **Site research** | One click audits a prospect's website: what they sell, concrete problems with evidence, best contact, fit score. |
+| ✉️ **Personal pitch drafts** | Short cold emails written from the research - not templates. |
+| 🤝 **Client onboarding** | Drafts the requirements questionnaire, then turns the client's answers into a structured **project brief**. |
+| 📋 **Pipeline & delivery** | Kanban board across 8 stages, a 7-step delivery checklist, price / paid / deadline tracking. |
+| 🛡️ **You approve everything** | The AI never sends anything. Drafts open in your own mail app with one click. |
+| 🪶 **Zero dependencies** | One Python file, standard library only, SQLite storage. Nothing to `pip install`. |
 
 ## How it works
 
-```
- Claude (scheduled job)        Claude (one click per lead)                      You
- ──────────────────────        ───────────────────────────────────────────      ─────────────────
- search the web for     ──▶    1 research their site  ──▶  2 draft pitch   ──▶  review + send it
- businesses with weak          (problems, fit, contact)    email                from your mail app
- websites, save leads                                                                  │
-                                                                                client says yes
-                                                                                       ▼
-                               3 draft onboarding email  ◀──────────────────── mark "replied"
-                                 (asks for requirements)  ──▶ you send it ──▶  client answers
-                                                                                       │
-                               5 write project brief  ◀── 4 you paste answers ◀────────┘
-                                 (pages, features, assets,
-                                  timeline, open questions)  ──▶  you build + deliver
+```mermaid
+flowchart LR
+    A["⏱ Scheduled job<br/>AI searches the web"] --> B[("Leads")]
+    B --> C["1 · Research<br/>site audit + fit score"]
+    C --> D["2 · Pitch email<br/>draft"]
+    D -->|you send it| E{"Client<br/>replies?"}
+    E -->|yes| F["3 · Onboarding email<br/>requirements questionnaire"]
+    F -->|you send it| G["4 · Client's answers<br/>you paste them in"]
+    G --> H["5 · Project brief<br/>pages, features, timeline"]
+    H --> I["🛠 You build & deliver"]
+    E -->|no| J["lost"]
 ```
 
-The split is deliberate: **Claude does the searching, research and writing. It never contacts
-anyone.** Every email opens in your own mail app (a `mailto:` link) so you read and send each one
-yourself.
-
-## Requirements
-
-- macOS or Linux, **Python 3.11+** with SQLite 3.35+ (standard library only, nothing to `pip install`)
-- [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and logged in - the `claude`
-  command must work in your terminal. Claude runs use your own Claude plan / API usage.
+**The split is deliberate:** the AI does searching, research and writing. **You** send every message,
+talk to clients and do the build. Every AI step runs `claude -p` (Claude Code in headless mode) on your
+machine with a locked-down tool list - see [Security](#security).
 
 ## Quick start
 
+**Requirements**
+
+- macOS or Linux (Windows via WSL) with **Python 3.11+**
+- **[Claude Code](https://claude.com/claude-code)** installed and signed in - either a Claude
+  subscription (Pro / Max) or an Anthropic API key. Check with `claude --version`.
+
+**Run it**
+
 ```bash
-git clone https://github.com/Hrishank21s/lead-manager.git
-cd lead-manager
-python3 tools/crm.py serve          # then open http://127.0.0.1:8765
+git clone https://github.com/Hrishank21s/lead-generation-manager.git
+cd lead-generation-manager
+python3 leadgen.py serve
 ```
 
-On first start it creates `data/crm.db` (git-ignored) with default instructions and one disabled
-lead-search job. The server must stay running for scheduled jobs to fire. Use another port with
-`python3 tools/crm.py serve 9000`.
+Open **http://127.0.0.1:8765**. On first start it creates `data/leadgen.db` with default
+instructions and one lead-search job (switched **off**). Keep the server running for scheduled jobs.
 
-## Using it
+## User guide
 
-### 1. Set your standing instructions (Claude page)
+### 1 · Tell the AI about your business
 
-These are added to **every** task Claude runs. Say what you sell, who you target, what a good lead
-looks like, and how to sign emails. The default:
+**Claude → Standing instructions.** This text is added to every AI task. Describe what you sell, your
+price, who you target, what makes a good lead, and how to sign emails.
 
-> We sell website rebuilds ($600-900, 5 days) to small businesses and indie SaaS whose site is
-> weak (slow, broken on mobile, dated, unclear offer). A good lead: real business, public site with
-> visible problems, a findable contact. Skip big companies and agencies.
+```text
+I build websites for physiotherapy clinics in Manchester, £900 fixed price, 7 days.
+Good lead: independent clinic, site not mobile-friendly or no online booking, contact email visible.
+Skip chains and franchises. Sign emails as "Sam, Northline Web".
+```
 
-Change the price, the niche (e.g. "dentists in Pune"), and add your name - pitches are signed
-`[Your name]` until you do.
+### 2 · Find leads
 
-### 2. Find leads (Claude page → jobs)
+**Claude → Jobs.** A job is a task in plain English plus an interval in hours.
 
-A job is a plain-English task plus an interval in hours. The built-in one is
-*"Find 5 new leads matching the instructions"*, every 24 h, **off by default**.
+- **Run now** - runs once (a few minutes). Results appear under *Run history* and in **Leads**.
+- **Run on schedule** - repeats while the server is up.
+- Add as many jobs as you like, e.g. one per city or niche.
 
-- **Run now** runs it once. A run takes a few minutes; results show in *Run history*.
-- **Run on schedule** makes it repeat while the server is up.
-- Add more jobs for other niches or cities.
+<img src="docs/claude.png" alt="Claude page: standing instructions, scheduled jobs, run history" width="900">
 
-Jobs check the existing list first and skip duplicate URLs.
+You can also add leads by hand on the **Leads** page, or from the terminal (see [CLI](#cli)).
 
-![Claude page](docs/claude.png)
+<img src="docs/leads.png" alt="Leads page: quick add, status filters, table" width="900">
 
-### 3. Work a lead (lead page)
+### 3 · Work a lead
 
-Open any lead. The right side is Claude's work, in order:
+Open any lead. The right panel is the AI's work, step by step:
 
-| Step | Button | What Claude writes |
+| Step | Button | What the AI produces |
+|:---:|---|---|
+| 1 | **Research their site** | What they sell and to whom · 3 concrete site problems with evidence · best contact · fit score 1-5 |
+| 2 | **Draft pitch** | A short, personal email quoting those problems and offering a free mockup |
+| 3 | **Draft onboarding email** | Questions on goals, pages, copy, brand assets, reference sites, features, hosting, deadline, deposit |
+| 4 | *(you)* | Paste the client's reply |
+| 5 | **Write project brief** | Pages & sections · features · assets (have / missing) · design direction · timeline · price · open questions |
+
+Every field is editable. Clicking a step saves the page, starts the AI, and the page refreshes itself
+until the result arrives. **Open in mail** opens the draft in your mail app, addressed and ready.
+
+<img src="docs/lead.png" alt="Lead page: details, delivery checklist, and the five AI steps" width="900">
+
+### 4 · Track delivery
+
+Set each lead's status as things happen:
+
+`new` → `qualified` → `mockup` → `pitched` → `replied` → `won` → `delivered` (or `lost`)
+
+Leads at *replied*, *won* or *delivered* move to **Clients**, with a 7-step checklist:
+questionnaire sent → requirements received → brief approved → deposit paid → build started →
+delivered → final payment received.
+
+<img src="docs/clients.png" alt="Clients page: progress, payments and deadlines" width="900">
+
+## Configuration
+
+| Variable | Default | Purpose |
 |---|---|---|
-| 1 Research | *Research their site* | What they sell, 3 concrete site problems with evidence, best contact, fit score 1-5 |
-| 2 Pitch email | *Draft pitch* | A short personal email quoting those problems and offering a free homepage mockup |
-| 3 Onboarding email | *Draft onboarding email* | Questions for goals, pages, copy, brand assets, reference sites, features, hosting, deadline, deposit |
-| 4 Client's answers | *(you paste their reply)* | - |
-| 5 Project brief | *Write project brief* | Pages and sections, features, assets have/missing, design direction, timeline, price, open questions |
-
-Every field is editable. A button saves the page first, then starts Claude; the page refreshes on
-its own until the result lands. **Open in mail** appears once there is a draft and an email contact.
-
-![Lead page](docs/lead.png)
-
-### 4. Move it through the pipeline
-
-Set the status as things happen:
-`new → qualified → mockup → pitched → replied → won → delivered` (or `lost`).
-
-Leads at *replied*, *won* or *delivered* appear on the **Clients** page with the 7-step delivery
-checklist (questionnaire sent → requirements received → brief approved → deposit paid → build
-started → delivered → final payment), price, amount paid and deadline.
-
-![Clients page](docs/clients.png)
-
-The **Dashboard** shows the pipeline board, leads, pitched, reply rate, active clients, money booked
-and money collected.
-
-## Command line
-
-Claude's jobs use these, and you can too:
+| `LEADGEN_DB` | `data/leadgen.db` | Database file location |
+| `LEADGEN_CLAUDE` | `claude` | Path to the Claude Code CLI |
+| `LEADGEN_MODEL` | *(your Claude Code default)* | Model passed as `--model`, e.g. `sonnet` or `opus` |
 
 ```bash
-python3 tools/crm.py add --name "Harbor Cafe" --url https://harbor-cafe.example \
-    --contact hello@harbor-cafe.example --source manual --notes "menu is a PDF"
-python3 tools/crm.py list            # all leads, tab-separated
-python3 tools/crm.py list pitched    # one status
+LEADGEN_MODEL=sonnet python3 leadgen.py serve 9000     # custom model and port
 ```
 
-## Safety model
+**Using an API key instead of a subscription:** set `ANTHROPIC_API_KEY` in the environment before
+starting the server; Claude Code picks it up. AI usage is billed to your own account.
 
-- **Claude's tools are locked down.** Every run is `claude -p --permission-mode default` with an
-  explicit allow-list: lead-search jobs get web search, web fetch and `crm.py add/list` only;
-  research gets web search + fetch; writing steps get no tools. Anything else is refused.
-- **Nothing is sent automatically.** There is no mail code in this tool. You send every email.
-- **Local only.** The server binds to `127.0.0.1`, and rejects requests whose `Host` or `Origin`
-  is not this server, so other websites can't trigger Claude runs (CSRF / DNS rebinding).
-- **Web content is treated as data.** Lead info and client replies are passed to Claude labelled as
-  information, never instructions - but this is a prompt, not a guarantee, which is one more reason
-  the tools are restricted.
-- **Your data stays on disk** in `data/crm.db` and is git-ignored, since it holds people's emails.
+## CLI
 
-## Known limitations (it's a prototype)
+```bash
+python3 leadgen.py serve [port]          # start the dashboard (default 8765)
+python3 leadgen.py add --name "Harbor Cafe" --url https://harbor-cafe.example \
+    --contact hello@harbor-cafe.example --source manual --notes "menu is a PDF"
+python3 leadgen.py list                  # all leads, tab-separated
+python3 leadgen.py list pitched          # one status
+```
 
-- Schedules are "every N hours", not fixed times; jobs only run while the server is up.
-- Single user, no login - do not expose the port to a network.
-- No client-facing intake form (that would need public hosting); you paste client replies in.
-- No email sending, inbox sync or reply detection - status is updated by hand.
-- Duplicate check is an exact URL match (`https://x.com` and `https://x.com/` count as two).
-- No automated test suite yet; checked by hand against a live server.
+## Security
 
-## Roadmap ideas
+- **Restricted AI.** Every run is `claude -p --permission-mode default` with an explicit allow-list.
+  Lead-search jobs: web search, web fetch, `leadgen.py add` / `list`. Research: web search + fetch.
+  Writing steps: no tools at all. Anything else is refused.
+- **No sending.** There is no email code in this project; you send every message yourself.
+- **Local only.** Binds to `127.0.0.1`; rejects requests with a foreign `Host` or `Origin`
+  (CSRF / DNS-rebinding protection), so websites you visit can't trigger AI runs.
+- **Escaped output, private data.** All page output is HTML-escaped; `data/` is git-ignored.
 
-Fixed-time schedules · inbox sync to auto-detect replies · client intake form · invoice/payment
-links · export to CSV · per-niche instruction presets.
+Details and how to report a vulnerability: [SECURITY.md](SECURITY.md).
+
+## Project structure
+
+```
+leadgen.py            the whole app: server, UI, scheduler, AI runner, CLI
+tests/                standard-library test suite (no AI calls)
+docs/                 logo and screenshots
+.github/              CI workflow and issue templates
+```
+
+Run the tests:
+
+```bash
+python3 -m unittest discover tests -v
+```
+
+## Roadmap
+
+- [ ] Fixed-time schedules (e.g. "weekdays at 9:00")
+- [ ] Inbox sync to detect replies and update status
+- [ ] Client-facing requirements form
+- [ ] Invoices and payment links
+- [ ] CSV import / export
+- [ ] Support for other AI providers
+
+## FAQ
+
+**Does it send emails for me?**
+No, by design. It drafts; you review and send from your own mail app.
+
+**What does it cost?**
+The software is free to use. AI runs use your own Claude subscription or API credits - a lead-search
+job is one Claude Code session of a few minutes.
+
+**Is my data uploaded anywhere?**
+Your leads stay in a local SQLite file. Text sent to the AI (instructions, lead details, client
+replies) goes to Anthropic through Claude Code, under your account's terms.
+
+**Can I use it for my business?**
+Yes - personal and commercial use is allowed. See the license below for what's not.
+
+**Is it legal to cold-email leads?**
+That depends on where you and your leads are (e.g. CAN-SPAM, GDPR, PECR). Write personal 1:1
+emails, honour opt-outs, and check the rules that apply to you.
+
+## License
+
+**Source-available, not open source.** © 2026 Hrishank Soni.
+
+✅ You **may** download, install and use it - personally or commercially - and adjust it for your
+own internal use.
+❌ You **may not** re-upload, redistribute, publish modified versions or re-brands, sell it, or
+offer it as a hosted service.
+
+Full terms: [LICENSE](LICENSE). Questions or permission requests: open an issue.
+
+---
+
+<div align="center"><sub>Built with Python's standard library and <a href="https://claude.com/claude-code">Claude Code</a>.</sub></div>
