@@ -71,7 +71,8 @@ machine with a locked-down tool list - see [Security](#security).
 
 - macOS or Linux (Windows via WSL) with **Python 3.11+**
 - **[Claude Code](https://claude.com/claude-code)** installed and signed in - either a Claude
-  subscription (Pro / Max) or an Anthropic API key. Check with `claude --version`.
+  subscription (Pro / Max) or an Anthropic API key. Check with `claude --version`; it needs a recent release that
+  supports `--safe-mode` (run `claude update` if a run fails with "unknown option").
 
 **Run it**
 
@@ -167,9 +168,10 @@ python3 leadgen.py list pitched          # one status
 
 ## Security
 
-- **Restricted AI.** Every run is `claude -p --permission-mode default` with an explicit allow-list.
+- **Restricted AI.** Every run is `claude -p --safe-mode --tools ... --allowedTools ...`: only the
+  listed tools exist in the run, and your own CLAUDE.md, hooks, plugins and MCP servers are not loaded.
   Lead-search jobs: web search, web fetch, `leadgen.py add` / `list`. Research: web search + fetch.
-  Writing steps: no tools at all. Anything else is refused.
+  Writing steps: no tools at all. A run cannot read your files or the lead database.
 - **No sending.** There is no email code in this project; you send every message yourself.
 - **Local only.** Binds to `127.0.0.1`; rejects requests with a foreign `Host` or `Origin`
   (CSRF / DNS-rebinding protection), so websites you visit can't trigger AI runs.

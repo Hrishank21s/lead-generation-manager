@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, following [Keep a Changelog](https://keepachangelog.com/). The project is a **prototype**;
 versions below 1.0 may change the data model without migration.
 
+## [0.2.1] - 2026-10-09
+
+### Security
+- Claude runs now start with `--safe-mode` and a hard `--tools` list. Before this, a run also had
+  Read and your MCP servers available (only writes were refused), so instructions planted on a lead's
+  website could read the lead database. It also loaded your own CLAUDE.md and hooks into every lead task.
+
+### Fixed
+- Drafted emails no longer end with a note to the owner, which "Open in mail" would have sent along.
+
 ## [0.2.0] - 2026-10-09
 
 ### Changed

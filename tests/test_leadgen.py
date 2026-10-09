@@ -92,6 +92,19 @@ class LeadGenTest(unittest.TestCase):
         self.assertEqual(status, "error")
         self.assertIn("no-such-claude", out)
 
+    def test_claude_runs_only_get_their_tools(self):
+        seen = []
+        real, leadgen.subprocess.run = leadgen.subprocess.run, lambda cmd, **kw: seen.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", "")
+        try:
+            leadgen.claude("hi", leadgen.JOB_TOOLS)
+            leadgen.claude("hi", [])
+        finally:
+            leadgen.subprocess.run = real
+        job, pitch = seen
+        self.assertIn("--safe-mode", job)
+        self.assertEqual(job[job.index("--tools") + 1], "WebSearch,WebFetch,Bash")
+        self.assertEqual(pitch[pitch.index("--tools") + 1], "")
+
 
 if __name__ == "__main__":
     unittest.main()
