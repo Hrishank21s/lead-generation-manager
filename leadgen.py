@@ -7,7 +7,7 @@ Python stdlib only. Data in data/leadgen.db (git-ignored: leads hold emails).
   leadgen.py list [status]                  # tab-separated, for Claude to check before adding
 
 Env: LEADGEN_DB (database path), LEADGEN_CLAUDE (claude binary), LEADGEN_MODEL (optional --model).
-Copyright (c) 2026 Hrishank Soni. Source-available, see LICENSE - not open source.
+Copyright (c) 2026 Hrishank Soni. MIT License, see LICENSE.
 
 Split of work: Claude finds leads, researches them, drafts pitches, onboards clients (questionnaire ->
 project brief). The owner builds. Every Claude run is `claude -p` with web tools at most - it never

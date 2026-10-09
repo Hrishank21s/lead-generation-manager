@@ -1,7 +1,15 @@
 # Changelog
 
-All notable changes to this project are listed here. The project is a **prototype**;
+All notable changes to this project are listed here, following [Keep a Changelog](https://keepachangelog.com/). The project is a **prototype**;
 versions below 1.0 may change the data model without migration.
+
+## [0.2.0] - 2026-10-09
+
+### Changed
+- **Relicensed under the MIT License** (was a custom source-available license). The project is now open source.
+
+### Added
+- Code of Conduct, pull request template, expanded contributing guide.
 
 ## [0.1.1] - 2026-10-09
 

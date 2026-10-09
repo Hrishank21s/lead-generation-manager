@@ -11,9 +11,10 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![Powered by Claude Code](https://img.shields.io/badge/AI-Claude%20Code-D97757)
-[![License: source-available](https://img.shields.io/badge/license-source--available-lightgrey)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
-[Features](#features) · [How it works](#how-it-works) · [Quick start](#quick-start) · [User guide](#user-guide) · [Configuration](#configuration) · [Security](#security) · [FAQ](#faq)
+[Features](#features) · [How it works](#how-it-works) · [Quick start](#quick-start) · [User guide](#user-guide) · [Configuration](#configuration) · [Security](#security) · [FAQ](#faq) · [Contributing](#contributing)
 
 <img src="docs/dashboard.png" alt="Dashboard: KPIs, pipeline board and recent AI activity" width="900">
 
@@ -214,22 +215,23 @@ Your leads stay in a local SQLite file. Text sent to the AI (instructions, lead 
 replies) goes to Anthropic through Claude Code, under your account's terms.
 
 **Can I use it for my business?**
-Yes - personal and commercial use is allowed. See the license below for what's not.
+Yes. It's MIT-licensed: use it, change it, ship it - just keep the copyright notice.
 
 **Is it legal to cold-email leads?**
 That depends on where you and your leads are (e.g. CAN-SPAM, GDPR, PECR). Write personal 1:1
 emails, honour opt-outs, and check the rules that apply to you.
 
+## Contributing
+
+Contributions are welcome - bug reports, docs, and code. Read [CONTRIBUTING.md](CONTRIBUTING.md) to get
+set up (no dependencies, tests run in under a second) and follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Found a security issue? Please report it privately - see [SECURITY.md](SECURITY.md).
+
+If this project is useful to you, a ⭐ helps others find it.
+
 ## License
 
-**Source-available, not open source.** © 2026 Hrishank Soni.
-
-✅ You **may** download, install and use it - personally or commercially - and adjust it for your
-own internal use.
-❌ You **may not** re-upload, redistribute, publish modified versions or re-brands, sell it, or
-offer it as a hosted service.
-
-Full terms: [LICENSE](LICENSE). Questions or permission requests: open an issue.
+[MIT](LICENSE) © 2026 Hrishank Soni
 
 ---
 
