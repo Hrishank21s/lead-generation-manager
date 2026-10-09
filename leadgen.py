@@ -377,7 +377,7 @@ def clients_page():
 
 
 def done(r):
-    return {int(i) for i in (r["checklist"] or "").split(",") if i.isdigit()}
+    return {int(i) for i in (r["checklist"] or "").split(",") if i.isdecimal()}
 
 
 def next_step(r):
@@ -466,6 +466,11 @@ class H(BaseHTTPRequestHandler):
         if loc:
             self.send_header("Location", loc)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        # No framing (clickjacking a "Run now" from another site), no local URLs leaked to lead sites via Referer.
+        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body.encode())
 
@@ -474,7 +479,7 @@ class H(BaseHTTPRequestHandler):
             return self.send(403, "forbidden")
         u = urlparse(self.path)
         parts = u.path.strip("/").split("/")
-        oid = int(parts[1]) if len(parts) == 2 and parts[1].isdigit() else None
+        oid = int(parts[1]) if len(parts) == 2 and parts[1].isdecimal() else None
         body = None
         if u.path == "/":
             body = dashboard()
@@ -499,7 +504,7 @@ class H(BaseHTTPRequestHandler):
             return self.send(403, "forbidden")
         raw = parse_qs(body, keep_blank_values=True)
         f = {k: v[0] for k, v in raw.items()}
-        oid = int(f["id"]) if f.get("id", "").isdigit() else None
+        oid = int(f["id"]) if f.get("id", "").isdecimal() else None
         if self.path == "/lead":
             base = (f.get("name"), f.get("url"), f.get("contact"), f.get("source"),
                     f.get("status") if f.get("status") in STAGES else "new", f.get("notes"))
@@ -507,7 +512,7 @@ class H(BaseHTTPRequestHandler):
                 if not oid:
                     q("INSERT INTO leads(name,url,contact,source,status,notes) VALUES(?,?,?,?,?,?)", base)
                     return self.send(303, loc="/leads")
-                checks = ",".join(c for c in raw.get("check", []) if c.isdigit())
+                checks = ",".join(c for c in raw.get("check", []) if c.isdecimal())
                 q("""UPDATE leads SET name=?,url=?,contact=?,source=?,status=?,notes=?,value=?,paid=?,deadline=?,
                      research=?,pitch=?,questionnaire=?,client_reply=?,brief=?,checklist=? WHERE id=?""",
                   (*base, num(f.get("value")), num(f.get("paid")), f.get("deadline"), *(f.get(k) for k in ("research", "pitch", "questionnaire")),

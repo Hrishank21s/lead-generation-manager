@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, following [Keep a Changelog](https://keepachangelog.com/). The project is a **prototype**;
 versions below 1.0 may change the data model without migration.
 
+## [Unreleased]
+
+### Security
+- Pages can no longer be framed by other websites (`frame-ancestors 'none'`, `X-Frame-Options: DENY`),
+  which blocks clickjacking a "Run now" or "Stop all runs". `Referrer-Policy: no-referrer` stops lead
+  websites from seeing your local CRM address when you click "Visit site".
+- IDs like `/lead/²` no longer crash the request (`isdigit` -> `isdecimal`).
+
 ## [0.2.1] - 2026-10-09
 
 ### Security

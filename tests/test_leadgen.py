@@ -77,6 +77,12 @@ class LeadGenTest(unittest.TestCase):
         self.assertEqual(self.req("/job/run", {"id": 1}, origin="https://evil.example")[0], 403)
         self.assertEqual(self.req("/", origin=None, host="evil.example")[0], 403)
 
+    def test_cannot_be_framed_and_odd_ids_dont_crash(self):
+        with open_url(urllib.request.Request(self.base + "/")) as resp:
+            self.assertEqual(resp.headers["X-Frame-Options"], "DENY")
+            self.assertIn("frame-ancestors 'none'", resp.headers["Content-Security-Policy"])
+        self.assertEqual(self.req("/lead/%C2%B2", origin=None)[0], 404)  # "²".isdigit() is True, int() raises
+
     def test_html_is_escaped(self):
         self.req("/lead", {"name": "<script>x</script>", "url": "https://xss.example"})
         self.assertNotIn("<script>x</script>", self.req("/leads", origin=None)[1])
