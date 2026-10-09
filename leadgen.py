@@ -5,6 +5,8 @@ Python stdlib only. Data in data/leadgen.db (git-ignored: leads hold emails).
   leadgen.py serve [port]                   # UI at http://127.0.0.1:8765 + runs scheduled Claude jobs
   leadgen.py add --name N --url U [--contact C] [--source S] [--notes T]   # used by Claude jobs; dedupes on url
   leadgen.py list [status]                  # tab-separated, for Claude to check before adding
+    leadgen.py export                         # writes every lead to CSV format stdout
+
 
 Env: LEADGEN_DB (database path), LEADGEN_CLAUDE (claude binary), LEADGEN_MODEL (optional --model).
 Copyright (c) 2026 Hrishank Soni. MIT License, see LICENSE.
@@ -14,7 +16,7 @@ project brief). The owner builds. Every Claude run is `claude -p` with web tools
 sends mail; drafts open in the owner's mail app via mailto, so the owner approves every send.
 # ponytail: interval-in-hours schedule, no cron syntax; add cron-style times if a job needs a fixed hour.
 """
-import argparse, html, os, re, signal, sqlite3, subprocess, sys, threading, time
+import argparse, csv, html, os, re, signal, sqlite3, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
@@ -59,6 +61,34 @@ DEFAULT_INSTR = ("We sell website rebuilds ($600-900, 5 days) to small businesse
 DEFAULT_JOB = "Find 5 new leads matching the instructions. Use any public source (Product Hunt, directories, Google results)."
 running = set()  # keys: "job<id>" or "lead<id>:<action>"
 procs = {}  # running key -> its claude process, so Stop all can kill it
+
+def sanitize_csv_cell(val):
+    if val is None:
+        return ""
+    s = str(val)
+    # Block CSV Formula Injection: Prefix with ' if it starts with =, +, -, @, tab, or CR
+    if s and (s.startswith(('=', '+', '-', '@', '\t', '\r'))):
+        return "'" + s
+    return s
+
+def export_leads_to_csv():
+    con = sqlite3.connect(DB)
+    try:
+        cursor = con.cursor()
+        cursor.execute("SELECT * FROM leads ORDER BY id")
+        
+        # Read column headers dynamically from database description schema
+        columns = [col[0] for col in cursor.description]
+        
+        # Output directly to stdout with universal Unix line endings
+        writer = csv.writer(sys.stdout, lineterminator='\n')
+        writer.writerow(columns)
+        
+        for row in cursor.fetchall():
+            sanitized_row = [sanitize_csv_cell(cell) for cell in row]
+            writer.writerow(sanitized_row)
+    finally:
+        con.close()
 
 
 def q(sql, args=()):
@@ -571,12 +601,15 @@ def main():
             print("added", a.url)
         except sqlite3.IntegrityError:
             print("exists", a.url)
-    elif len(sys.argv) > 1 and sys.argv[1] == "list":
+        elif len(sys.argv) > 1 and sys.argv[1] == "list":
         st = sys.argv[2] if len(sys.argv) > 2 else ""
         for r in q("SELECT id,status,name,url FROM leads WHERE ?='' OR status=?", (st, st)):
             print(*r, sep="\t")
+    elif len(sys.argv) > 1 and sys.argv[1] == "export":
+        export_leads_to_csv()
     else:
         print(__doc__)
+
 
 
 if __name__ == "__main__":
