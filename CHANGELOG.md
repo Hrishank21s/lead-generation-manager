@@ -14,6 +14,8 @@ versions below 1.0 may change the data model without migration.
 - **Stop all runs** button in the sidebar while Claude is working.
 
 ### Fixed
+- "Open in mail" now uses the first email in the Contact field. Lead searches often save phone and
+  WhatsApp numbers there too, which made the button open a broken address.
 - Stopping the server left its Claude runs going in the background (still adding leads). They now end with it.
 - Drafted emails no longer end with a note to the owner, which "Open in mail" would have sent along.
 

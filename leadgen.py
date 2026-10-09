@@ -14,7 +14,7 @@ project brief). The owner builds. Every Claude run is `claude -p` with web tools
 sends mail; drafts open in the owner's mail app via mailto, so the owner approves every send.
 # ponytail: interval-in-hours schedule, no cron syntax; add cron-style times if a job needs a fixed hour.
 """
-import argparse, html, os, signal, sqlite3, subprocess, sys, threading, time
+import argparse, html, os, re, signal, sqlite3, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
@@ -386,11 +386,13 @@ def next_step(r):
 
 
 def mailto(to, text):
-    if not text or "@" not in (to or ""):
+    # Contact often holds phones/WhatsApp too ("+91 98.. ; a@b.in"): mail goes to the first email address in it.
+    to = re.search(r"[\w.+-]+@[\w-]+(\.[\w-]+)+", to or "")
+    if not text or not to:
         return ""
     lines = text.strip().split("\n")
     subj = lines.pop(0)[8:].strip() if lines[0].lower().startswith("subject:") else ""
-    return (f'<a class="btn ghost" href="mailto:{quote(to.strip())}?subject={quote(subj)}'
+    return (f'<a class="btn ghost" href="mailto:{quote(to[0])}?subject={quote(subj)}'
             f'&body={quote(chr(10).join(lines).strip())}">Open in mail</a>')
 
 

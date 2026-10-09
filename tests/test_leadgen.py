@@ -59,7 +59,7 @@ class LeadGenTest(unittest.TestCase):
     def test_lead_lifecycle(self):
         self.assertEqual(self.req("/lead", {"name": "Acme", "url": "https://acme.example", "contact": "a@acme.example"})[0], 303)
         lid = leadgen.q("SELECT id FROM leads WHERE url='https://acme.example'")[0]["id"]
-        code, _ = self.req("/lead", {"id": lid, "name": "Acme", "url": "https://acme.example", "contact": "a@acme.example",
+        code, _ = self.req("/lead", {"id": lid, "name": "Acme", "url": "https://acme.example", "contact": "+91 98000 00000; a@acme.example",
                                      "status": "won", "value": "800", "paid": "400", "check": ["0", "3"],
                                      "pitch": "Subject: Hello there\n\nBody"})
         self.assertEqual(code, 303)
